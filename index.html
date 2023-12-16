@@ -29,12 +29,6 @@
             text-align: center;
             width: 45%;
         }
-
-        canvas {
-            max-width: 80%;
-            margin-top: 20px;
-            max-height: 300px; /* Atur tinggi maksimum grafik */
-        }
     </style>
 </head>
 <body>
@@ -63,8 +57,6 @@
     </div>
 </div>
 
-<canvas id="myChart"></canvas>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const channelID = '2381558';
@@ -72,6 +64,9 @@
     const field1 = 1;
     const field2 = 2;
     const field3 = 3;
+
+    let totalSteps = 0;
+    let totalCalories = 0;
 
     // Function to fetch ThingSpeak data
     async function fetchData() {
@@ -98,53 +93,15 @@
         const calories = (data[0].field3 / 1000) * 35;
         document.getElementById('calories').innerText = `Estimasi Kalori: ${calories.toFixed(2)} kcal`;
 
-        // Update Chart
-        updateChart(data);
-    }
+        // Update totalSteps dan totalCalories
+        totalSteps += parseInt(data[0].field3);
+        totalCalories += calories;
 
-    function updateChart(data) {
-        const labels = data.map(entry => entry.created_at);
-        const heartRateData = data.map(entry => entry.field1);
-        const temperatureData = data.map(entry => parseFloat(entry.field2).toFixed(1));
-        const motionData = data.map(entry => entry.field3);
-
-        const ctx = document.getElementById('myChart').getContext('2d');
-        if(window.myChart){
-            window.myChart.destroy(); // Hancurkan grafik yang ada sebelumnya
+        // Reset setiap 24 jam (86400000 milidetik)
+        if (new Date().getHours() === 0 && new Date().getMinutes() === 0) {
+            totalSteps = 0;
+            totalCalories = 0;
         }
-        window.myChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Detak Jantung',
-                    data: heartRateData,
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 1,
-                    fill: false
-                }, {
-                    label: 'Suhu',
-                    data: temperatureData,
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1,
-                    fill: false
-                }, {
-                    label: 'Gerak',
-                    data: motionData,
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1,
-                    fill: false
-                }]
-            },
-            options: {
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom'
-                    }
-                }
-            }
-        });
     }
 
     // Update data initially and every 1 minute (60,000 milliseconds)
