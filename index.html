@@ -109,7 +109,10 @@
         const motionData = data.map(entry => entry.field3);
 
         const ctx = document.getElementById('myChart').getContext('2d');
-        const myChart = new Chart(ctx, {
+        if(window.myChart){
+            window.myChart.destroy(); // Hancurkan grafik yang ada sebelumnya
+        }
+        window.myChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
