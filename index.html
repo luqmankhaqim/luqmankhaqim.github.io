@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ThingSpeak Data Display</title>
+    <title>Health Monitor and Thingspeak Data Display</title>
     <style>
         body {
             display: flex;
@@ -29,7 +29,12 @@
             text-align: center;
             width: 45%;
         }
+
+        #dataTable {
+            display: none; /* Hidden by default */
+        }
     </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 </head>
 <body>
 
@@ -57,22 +62,43 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<button onclick="toggleTable()">Log pembacaan sensor</button>
+
+<table border="1" id="dataTable">
+    <thead>
+        <tr>
+            <th>Timestamp</th>
+            <th>Detak Jantung</th>
+            <th>Suhu</th>
+            <th>Total Gerakan</th>
+            <!-- Add more columns for additional fields if needed -->
+        </tr>
+    </thead>
+    <tbody id="dataBody">
+        <!-- Data will be displayed here -->
+    </tbody>
+</table>
+
 <script>
     const channelID = '2381558';
     const apiKey = 'DD19MN6N72OOYNJR';
-    const field1 = 1;
-    const field2 = 2;
-    const field3 = 3;
+    const field1 = 'field1';
+    const field2 = 'field2';
+    const field3 = 'field3';
 
     let totalSteps = 0;
     let totalCalories = 0;
 
     // Function to fetch ThingSpeak data
     async function fetchData() {
-        const response = await fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${apiKey}&results=10`);
-        const data = await response.json();
-        return data.feeds;
+        try {
+            const response = await fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${apiKey}&results=10`);
+            const data = await response.json();
+            return data.feeds;
+        } catch (error) {
+            console.error('Error fetching data from Thingspeak:', error);
+            return [];
+        }
     }
 
     // Function to update data in HTML
@@ -80,21 +106,21 @@
         const data = await fetchData();
 
         // Update Detak Jantungmu
-        document.getElementById('heartRate').innerText = `Rata-rata: ${data[0].field1} BPM`;
+        document.getElementById('heartRate').innerText = `Rata-rata: ${data[0]?.field1 || 'N/A'} BPM`;
 
         // Update Suhu
-        const temperature = parseFloat(data[0].field2).toFixed(1);
+        const temperature = parseFloat(data[0]?.field2 || 0).toFixed(1);
         document.getElementById('temperature').innerText = `Rata-rata: ${temperature} °C`;
 
         // Update Gerak
-        document.getElementById('motion').innerText = `Akumulasi: ${data[0].field3} langkah`;
+        document.getElementById('motion').innerText = `Akumulasi: ${data[0]?.field3 || 0} langkah`;
 
         // Update Kalori
-        const calories = (data[0].field3 / 1000) * 35;
+        const calories = (parseFloat(data[0]?.field3 || 0) / 1000) * 35;
         document.getElementById('calories').innerText = `Estimasi Kalori: ${calories.toFixed(2)} kcal`;
 
         // Update totalSteps dan totalCalories
-        totalSteps += parseInt(data[0].field3);
+        totalSteps += parseInt(data[0]?.field3 || 0);
         totalCalories += calories;
 
         // Reset setiap 24 jam (86400000 milidetik)
@@ -102,11 +128,45 @@
             totalSteps = 0;
             totalCalories = 0;
         }
+
+        // Update Thingspeak Data
+        var entries = data;
+
+        // Clear existing data
+        $('#dataBody').empty();
+
+        // Iterate through entries and append to the table
+        for (var i = 0; i < entries.length; i++) {
+            var row = '<tr>';
+            
+            // Display Timestamp in a more readable format
+            var timestamp = new Date(entries[i].created_at).toLocaleString();
+            row += '<td>' + timestamp + '</td>';
+            
+            // Display Detak Jantung with one decimal place
+            row += '<td>' + (parseFloat(entries[i].field1) || 0).toFixed(1) + '</td>';
+            
+            // Display Suhu with one decimal place
+            row += '<td>' + (parseFloat(entries[i].field2) || 0).toFixed(1) + '</td>';
+            
+            // Display Total Gerakan
+            row += '<td>' + (entries[i].field3 || 0) + '</td>';
+            
+            // Add more columns for additional fields if needed
+            row += '</tr>';
+            $('#dataBody').append(row);
+        }
     }
 
     // Update data initially and every 1 minute (60,000 milliseconds)
     updateData();
     setInterval(updateData, 60000);
+
+    // Function to toggle visibility of the data table
+    function toggleTable() {
+        const dataTable = document.getElementById('dataTable');
+        dataTable.style.display = (dataTable.style.display === 'none') ? 'table' : 'none';
+    }
 </script>
 
 </body>
